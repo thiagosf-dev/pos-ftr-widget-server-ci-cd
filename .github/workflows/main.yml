@@ -1,4 +1,4 @@
-name: widget-server CI
+name: widget-server CI AWS ECR
 
 on:
   push:
