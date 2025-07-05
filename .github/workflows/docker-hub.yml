@@ -25,11 +25,18 @@ jobs:
         id: generate-tag
         run: echo "TAG=$(echo ${{ github.sha }} | rev | cut -c1-5 | rev)" >> $GITHUB_OUTPUT
 
-      - name: Build and Push Docker Image to Docker Hub
-        id: build-push-image
-        env:
-          DOCKER_HUB_REPOSITORY: ${{ vars.DOCKER_HUB_REPOSITORY }}
-          IMAGE_TAG: ${{ steps.generate-tag.outputs.TAG }}
-        run: |
-          docker build -t $DOCKER_HUB_REPOSITORY:$IMAGE_TAG .
-          docker push $DOCKER_HUB_REPOSITORY:$IMAGE_TAG
+      # - name: Build and Push Docker Image to Docker Hub
+      #   id: build-push-image
+      #   env:
+      #     DOCKER_HUB_REPOSITORY: ${{ vars.DOCKER_HUB_REPOSITORY }}
+      #     IMAGE_TAG: ${{ steps.generate-tag.outputs.TAG }}
+      #   run: |
+      #     docker build -t $DOCKER_HUB_REPOSITORY:$IMAGE_TAG .
+      #     docker push $DOCKER_HUB_REPOSITORY:$IMAGE_TAG
+
+      - name: Build and push with Actions Docker Builder
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ vars.DOCKER_HUB_REPOSITORY }}:${{ steps.generate-tag.outputs.TAG }}
