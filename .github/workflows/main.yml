@@ -14,6 +14,22 @@ jobs:
         id: checkout
         uses: actions/checkout@v4
 
+      - name: Configure Node
+        id: configure-node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install PNPM
+        id: install-pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 8
+
+      - name: Install Dependencies
+        id: install-dependencies
+        run: pnpm install
+
       - name: Configure AWS Credentials
         id: configure-aws-credentials
         uses: aws-actions/configure-aws-credentials@v4.1.0
@@ -30,6 +46,7 @@ jobs:
         id: generate-tag
         run: echo "TAG=$(echo ${{ github.sha }} | rev | cut -c1-5 | rev)" >> $GITHUB_OUTPUT
 
+      # ######BUILD MANUAL######
       # - name: Build and Push Docker Image to Amazon ECR
       #   id: build-push-image
       #   env:
@@ -40,6 +57,7 @@ jobs:
       #     docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
       #     docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
+      # ######BUILD COM GITHUB ACTIONS######
       - name: Build and push with Actions Docker Builder
         uses: docker/build-push-action@v6
         with:
