@@ -14,6 +14,10 @@ jobs:
         id: checkout
         uses: actions/checkout@v4
 
+      - name: Generate Tag from Commit Hash
+        id: generate-tag
+        run: echo "TAG=$(echo ${{ github.sha }} | rev | cut -c1-5 | rev)" >> $GITHUB_OUTPUT
+
       - name: Configure Node
         id: configure-node
         uses: actions/setup-node@v4
@@ -42,12 +46,34 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Generate Tag from Commit Hash
-        id: generate-tag
-        run: echo "TAG=$(echo ${{ github.sha }} | rev | cut -c1-5 | rev)" >> $GITHUB_OUTPUT
+      - name: Load image
+        id: load-image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: ${{ steps.login-ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}:scanner
+
+      - name: Run Trivy scanner
+        id: run-trivy
+        uses: aquasecurity/trivy-action@0.29.0
+        with:
+          image-ref: "${{ steps.login-ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}:scanner"
+          format: "table"
+          ignore-unfixed: true
+          vuln-type: "os,library"
+          severity: "CRITICAL,HIGH,MEDIUM,LOW"
+
+      # ######BUILD COM GITHUB ACTIONS######
+      - name: Build and Push to AWS ECR
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.login-ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}:${{ steps.generate-tag.outputs.TAG }}
 
       # ######BUILD MANUAL######
-      # - name: Build and Push Docker Image to Amazon ECR
+      # - name: Build and Push to AWS ECR
       #   id: build-push-image
       #   env:
       #     ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
@@ -56,11 +82,3 @@ jobs:
       #   run: |
       #     docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
       #     docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-
-      # ######BUILD COM GITHUB ACTIONS######
-      - name: Build and push with Actions Docker Builder
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          tags: ${{ steps.login-ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}:${{ steps.generate-tag.outputs.TAG }}
